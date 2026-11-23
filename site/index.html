@@ -61,6 +61,10 @@ h2{font-size:1.25rem;margin:2rem 0 .5rem}ol,ul.plain{color:var(--muted);padding-
 pre{background:rgba(127,127,127,.1);padding:.8rem 1rem;border-radius:6px;white-space:pre-wrap;font-size:.9rem;color:var(--fg)}
 code{font-size:.9em}main a,main code{overflow-wrap:anywhere}
 @media (max-width:599px){footer,.family-credit,.family,.site-links{font-size:15px}}
+.row{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin:1rem 0}.row label{font-weight:600}
+select{font:inherit;padding:.4rem .5rem;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--fg)}
+.small{font-size:.95rem}.posts{list-style:none;padding:0}.posts li{border-top:1px solid var(--line);padding:.7rem 0;margin:0}
+.posts a{font-weight:600}.posts time{display:block;color:var(--muted);font-size:.95rem}
 </style>
 </head>
 <body>
@@ -90,10 +94,29 @@ code{font-size:.9em}main a,main code{overflow-wrap:anywhere}
   </nav>
 </header>
 <main id="main">
-<div class="mark">wordpress-section.demo.sovereignweb.site</div>
-<h1>A section fed from WordPress (demo)</h1>
-<p>A demo for web agencies: a static section built from a WordPress site's public data, so the agency keeps its WordPress. Built from public WordPress feeds; not affiliated with the sites shown.</p>
-<p>This site was made by one request to the Sovereign Website pipeline. Its files, its history and its address are in a repository its owner controls, and can move anywhere.</p>
+<div class="mark">A demo for web agencies</div>
+<h1>A section fed from WordPress</h1>
+<p><strong>Demo.</strong> This page is a made-up example for web agencies, not work for any of the sites shown. It is built from their public WordPress data and is not affiliated with them.</p>
+<p>The idea: a client keeps WordPress for writing, and the agency adds a fast, static section anywhere that shows the latest posts. This page reads a site's public WordPress feed (<code>/wp-json/wp/v2/posts</code>) in your browser and lays out the titles, dates and links. Nothing is copied or stored; every link goes to the original.</p>
+<div class="row"><label for="src">WordPress site</label>
+<select id="src">
+<option value="https://wordpress.org/news">WordPress News (wordpress.org)</option>
+<option value="https://make.wordpress.org/core">Make WordPress Core</option>
+<option value="https://www.nasa.gov">NASA</option>
+<option value="https://blog.ted.com">TED Blog</option>
+<option value="https://variety.com">Variety</option>
+<option value="https://www.rollingstone.com">Rolling Stone</option>
+</select></div>
+<p id="note" class="small"></p>
+<div id="posts" aria-live="polite"><p>Loading the latest posts...</p></div>
+<noscript><p>This demo reads the feed in your browser, so it needs JavaScript.</p></noscript>
+<h2>How an agency would use it</h2>
+<ol>
+<li>Keep the client's WordPress for writing posts.</li>
+<li>Add this section to a static Sovereign Website: it reads the public feed and needs no plugin, no server and no login.</li>
+<li>Style it to the site's design; the client's site stays fast and can move host at any time.</li>
+</ol>
+<p class="small">The six sites were picked as popular public WordPress sites whose feed is open to browsers, checked on 23 November 2026.</p>
 <footer>
 <nav class="site-links" aria-label="About this site">
   <a href="/start/">Start here</a>
@@ -103,5 +126,31 @@ code{font-size:.9em}main a,main code{overflow-wrap:anywhere}
 </nav>
 A sovereign website, made with the <a href="https://sovereignwebsite.org/">open pattern</a>. Source: <a href="https://github.com/SovereignWebsite/Site__Demo__WordPress-Section">github.com/SovereignWebsite/Site__Demo__WordPress-Section</a>.</footer>
 </main>
+<script>
+(function () {
+  var sel = document.getElementById('src'), out = document.getElementById('posts'), note = document.getElementById('note');
+  function txt(h) { var d = document.createElement('div'); d.innerHTML = h; return d.textContent || ''; }
+  function load() {
+    var base = sel.value, name = sel.options[sel.selectedIndex].text;
+    note.textContent = base.indexOf('wordpress.org') > -1 ? 'From WordPress\u2019s own site.' : 'Built from ' + name + '\u2019s public WordPress data; not affiliated with ' + name + '.';
+    out.textContent = 'Loading the latest posts...';
+    fetch(base + '/wp-json/wp/v2/posts?per_page=6&_fields=id,date,link,title', { credentials: 'omit' })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (ps) {
+        out.textContent = ''; var ul = document.createElement('ul'); ul.className = 'posts';
+        ps.forEach(function (p) {
+          if (!/^https:\/\//.test(p.link)) return;
+          var li = document.createElement('li'), a = document.createElement('a'), t = document.createElement('time');
+          a.href = p.link; a.textContent = txt(p.title && p.title.rendered); a.rel = 'noopener';
+          t.dateTime = p.date; t.textContent = new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+          li.appendChild(a); li.appendChild(t); ul.appendChild(li);
+        });
+        out.appendChild(ul);
+      })
+      .catch(function () { out.textContent = 'That site did not answer just now. Try another.'; });
+  }
+  sel.addEventListener('change', load); load();
+})();
+</script>
 </body>
 </html>
