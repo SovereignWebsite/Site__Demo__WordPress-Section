@@ -130,13 +130,17 @@ A sovereign website, made with the <a href="https://sovereignwebsite.org/">open 
 (function () {
   var sel = document.getElementById('src'), out = document.getElementById('posts'), note = document.getElementById('note');
   function txt(h) { var d = document.createElement('div'); d.innerHTML = h; return d.textContent || ''; }
+  var seq = 0, ctl = null;
   function load() {
-    var base = sel.value, name = sel.options[sel.selectedIndex].text;
+    var base = sel.value, name = sel.options[sel.selectedIndex].text, mine = ++seq;
+    if (ctl && ctl.abort) ctl.abort();
+    ctl = window.AbortController ? new AbortController() : null;
     note.textContent = base.indexOf('wordpress.org') > -1 ? 'From WordPress\u2019s own site.' : 'Built from ' + name + '\u2019s public WordPress data; not affiliated with ' + name + '.';
     out.textContent = 'Loading the latest posts...';
-    fetch(base + '/wp-json/wp/v2/posts?per_page=6&_fields=id,date,link,title', { credentials: 'omit' })
+    fetch(base + '/wp-json/wp/v2/posts?per_page=6&_fields=id,date,link,title', { credentials: 'omit', signal: ctl ? ctl.signal : undefined })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(function (ps) {
+        if (mine !== seq || base !== sel.value) return;
         out.textContent = ''; var ul = document.createElement('ul'); ul.className = 'posts';
         ps.forEach(function (p) {
           if (!/^https:\/\//.test(p.link)) return;
@@ -147,7 +151,7 @@ A sovereign website, made with the <a href="https://sovereignwebsite.org/">open 
         });
         out.appendChild(ul);
       })
-      .catch(function () { out.textContent = 'That site did not answer just now. Try another.'; });
+      .catch(function (e) { if (mine !== seq || (e && e.name === 'AbortError')) return; out.textContent = 'That site did not answer just now. Try another.'; });
   }
   sel.addEventListener('change', load); load();
 })();
